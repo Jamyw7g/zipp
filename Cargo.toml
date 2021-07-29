@@ -7,7 +7,6 @@ edition = "2018"
 
 [dependencies]
 bitflags = "1.2.1"
-thiserror = "1.0.26"
 zipp-sys = { path = "zipp-sys" }
 
 
