@@ -8,6 +8,7 @@ use zipp_sys::*;
 
 use crate::file::File;
 use crate::source::Source;
+use crate::consts::*;
 use crate::*;
 
 #[derive(Debug)]
@@ -17,7 +18,7 @@ pub struct Archive {
 
 impl Archive {
     pub fn open(path: &CStr) -> ZResult<Self> {
-        _open(path, OpenFlag::RDONLY.bits())
+        _open(path, ZIP_RDONLY)
     }
 
     pub fn from_source<T>(source: Source<T>, flag: i32) -> ZResult<Self> {
@@ -35,7 +36,7 @@ impl Archive {
     }
 
     pub fn create(path: &CStr) -> ZResult<Self> {
-        _open(path, OpenFlag::CREATE.bits())
+        _open(path, ZIP_CREATE)
     }
 
     pub fn discard(self) {
@@ -91,9 +92,9 @@ impl Archive {
         }
     }
 
-    pub fn set_file_compression(&self, index: u64, comp: Comp, comp_flag: u32) -> ZResult<()> {
+    pub fn set_file_compression(&self, index: u64, comp: i32, comp_flag: u32) -> ZResult<()> {
         let errno =
-            unsafe { zip_set_file_compression(self.inner.as_ptr(), index, comp.bits(), comp_flag) };
+            unsafe { zip_set_file_compression(self.inner.as_ptr(), index, comp, comp_flag) };
         if errno == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -101,9 +102,9 @@ impl Archive {
         }
     }
 
-    pub fn file_set_encryption(&self, index: u64, method: Encrypt, passwd: &CStr) -> ZResult<()> {
+    pub fn file_set_encryption(&self, index: u64, method: u16, passwd: &CStr) -> ZResult<()> {
         let errno = unsafe {
-            zip_file_set_encryption(self.inner.as_ptr(), index, method.bits(), passwd.as_ptr())
+            zip_file_set_encryption(self.inner.as_ptr(), index, method, passwd.as_ptr())
         };
         if errno == -1 {
             zip_err!(self.inner.as_ptr())
@@ -127,8 +128,8 @@ impl Archive {
         }
     }
 
-    pub fn get_comment(&self, flag: ZipFlag) -> ZResult<&CStr> {
-        let res = unsafe { zip_get_archive_comment(self.inner.as_ptr(), null_mut(), flag.bits()) };
+    pub fn get_comment(&self, flag: u32) -> ZResult<&CStr> {
+        let res = unsafe { zip_get_archive_comment(self.inner.as_ptr(), null_mut(), flag) };
         if res.is_null() {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -136,14 +137,14 @@ impl Archive {
         }
     }
 
-    pub fn open_file(&self, name: &CStr, flag: ZipFlag, passwd: Option<&CStr>) -> ZResult<File> {
+    pub fn open_file(&self, name: &CStr, flag: u32, passwd: Option<&CStr>) -> ZResult<File> {
         let passwd = if passwd.is_none() {
             null()
         } else {
             passwd.unwrap().as_ptr()
         };
         let res =
-            unsafe { zip_fopen_encrypted(self.inner.as_ptr(), name.as_ptr(), flag.bits(), passwd) };
+            unsafe { zip_fopen_encrypted(self.inner.as_ptr(), name.as_ptr(), flag, passwd) };
         if res.is_null() {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -154,7 +155,7 @@ impl Archive {
     pub fn open_file_index(
         &self,
         index: u64,
-        flag: ZipFlag,
+        flag: u32,
         passwd: Option<&CStr>,
     ) -> ZResult<File> {
         let passwd = if passwd.is_none() {
@@ -163,7 +164,7 @@ impl Archive {
             passwd.unwrap().as_ptr()
         };
         let res =
-            unsafe { zip_fopen_index_encrypted(self.inner.as_ptr(), index, flag.bits(), passwd) };
+            unsafe { zip_fopen_index_encrypted(self.inner.as_ptr(), index, flag, passwd) };
         if res.is_null() {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -171,9 +172,9 @@ impl Archive {
         }
     }
 
-    pub fn file_rename(&self, index: u64, name: &CStr, flag: ZipFlag) -> ZResult<()> {
+    pub fn file_rename(&self, index: u64, name: &CStr, flag: u32) -> ZResult<()> {
         let errno =
-            unsafe { zip_file_rename(self.inner.as_ptr(), index, name.as_ptr(), flag.bits()) };
+            unsafe { zip_file_rename(self.inner.as_ptr(), index, name.as_ptr(), flag) };
         if errno == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -181,13 +182,13 @@ impl Archive {
         }
     }
 
-    pub fn file_add<T>(&self, name: &CStr, source: Source<T>, flag: ZipFlag) -> ZResult<u64> {
+    pub fn file_add<T>(&self, name: &CStr, source: Source<T>, flag: u32) -> ZResult<u64> {
         let res = unsafe {
             zip_file_add(
                 self.inner.as_ptr(),
                 name.as_ptr(),
                 source.into_raw(),
-                flag.bits(),
+                flag,
             )
         };
         if res == -1 {
@@ -197,9 +198,9 @@ impl Archive {
         }
     }
 
-    pub fn file_replace<T>(&self, index: u64, source: Source<T>, flag: ZipFlag) -> ZResult<()> {
+    pub fn file_replace<T>(&self, index: u64, source: Source<T>, flag: u32) -> ZResult<()> {
         let res =
-            unsafe { zip_file_replace(self.inner.as_ptr(), index, source.into_raw(), flag.bits()) };
+            unsafe { zip_file_replace(self.inner.as_ptr(), index, source.into_raw(), flag) };
         if res == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -216,9 +217,9 @@ impl Archive {
         }
     }
 
-    pub fn file_get_comment(&self, index: u64, flag: ZipFlag) -> ZResult<&CStr> {
+    pub fn file_get_comment(&self, index: u64, flag: u32) -> ZResult<&CStr> {
         let res =
-            unsafe { zip_file_get_comment(self.inner.as_ptr(), index, null_mut(), flag.bits()) };
+            unsafe { zip_file_get_comment(self.inner.as_ptr(), index, null_mut(), flag) };
         if res.is_null() {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -226,11 +227,11 @@ impl Archive {
         }
     }
 
-    pub fn stat_name(&self, name: &CStr, flag: StatFlag) -> ZResult<Stat> {
+    pub fn stat_name(&self, name: &CStr, flag: u32) -> ZResult<Stat> {
         let mut stat = unsafe { zeroed() };
         let res = unsafe {
             zip_stat_init(&mut stat);
-            zip_stat(self.inner.as_ptr(), name.as_ptr(), flag.bits(), &mut stat)
+            zip_stat(self.inner.as_ptr(), name.as_ptr(), flag, &mut stat)
         };
         if res == -1 {
             zip_err!(self.inner.as_ptr())
@@ -239,12 +240,12 @@ impl Archive {
         }
     }
 
-    pub fn get_name(&self, index: u64, flag: ZipFlag) -> &CStr {
-        unsafe { CStr::from_ptr(zip_get_name(self.inner.as_ptr(), index, flag.bits())) }
+    pub fn get_name(&self, index: u64, flag: u32) -> &CStr {
+        unsafe { CStr::from_ptr(zip_get_name(self.inner.as_ptr(), index, flag)) }
     }
 
-    pub fn get_index(&self, name: &CStr, flag: ZipFlag) -> ZResult<u64> {
-        let res = unsafe { zip_name_locate(self.inner.as_ptr(), name.as_ptr(), flag.bits()) };
+    pub fn get_index(&self, name: &CStr, flag: u32) -> ZResult<u64> {
+        let res = unsafe { zip_name_locate(self.inner.as_ptr(), name.as_ptr(), flag) };
         if res == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -252,9 +253,9 @@ impl Archive {
         }
     }
 
-    pub fn num_entries(&self, flag: ZipFlag) -> u64 {
+    pub fn num_entries(&self, flag: u32) -> u64 {
         // Safety: because of self.inner is `NonNull` pointer
-        unsafe { zip_get_num_entries(self.inner.as_ptr(), flag.bits()) as _ }
+        unsafe { zip_get_num_entries(self.inner.as_ptr(), flag) as _ }
     }
 
     /*
@@ -268,8 +269,8 @@ impl Archive {
     }
     */
 
-    pub fn dir_add(&self, name: &CStr, flag: ZipFlag) -> ZResult<u64> {
-        let res = unsafe { zip_dir_add(self.inner.as_ptr(), name.as_ptr(), flag.bits()) };
+    pub fn dir_add(&self, name: &CStr, flag: u32) -> ZResult<u64> {
+        let res = unsafe { zip_dir_add(self.inner.as_ptr(), name.as_ptr(), flag) };
         if res == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -277,11 +278,11 @@ impl Archive {
         }
     }
 
-    pub fn stat_index(&self, index: u64, flag: StatFlag) -> ZResult<Stat> {
+    pub fn stat_index(&self, index: u64, flag: u32) -> ZResult<Stat> {
         let mut stat = unsafe { zeroed() };
         let res = unsafe {
             zip_stat_init(&mut stat);
-            zip_stat_index(self.inner.as_ptr(), index, flag.bits(), &mut stat)
+            zip_stat_index(self.inner.as_ptr(), index, flag, &mut stat)
         };
         if res == -1 {
             zip_err!(self.inner.as_ptr())
@@ -299,7 +300,7 @@ impl Archive {
         }
     }
 
-    pub fn iter_stat(&self, flag: StatFlag) -> IterStat {
+    pub fn iter_stat(&self, flag: u32) -> IterStat {
         IterStat {
             ptr: self.inner.as_ptr(),
             pos: 0,
@@ -343,7 +344,7 @@ impl<'a> Iterator for IterFile<'a> {
 pub struct IterStat<'a> {
     ptr: *mut zip_t,
     pos: u64,
-    flag: StatFlag,
+    flag: u32,
     _phantom_data: PhantomData<&'a Archive>,
 }
 
@@ -354,7 +355,7 @@ impl<'a> Iterator for IterStat<'a> {
         unsafe {
             let mut stat = zeroed();
             zip_stat_init(&mut stat);
-            let errno = zip_stat_index(self.ptr, self.pos, self.flag.bits(), &mut stat);
+            let errno = zip_stat_index(self.ptr, self.pos, self.flag, &mut stat);
             if errno == -1 {
                 None
             } else {
@@ -365,113 +366,48 @@ impl<'a> Iterator for IterStat<'a> {
     }
 }
 
-bitflags! {
-    pub struct OpenFlag: c_int {
-        const CREATE = 1;
-        const EXCL = 2;
-        const CHECKCONS = 4;
-        const TRUNCATE = 8;
-        const RDONLY = 16;
-    }
-}
-
-bitflags! {
-    pub struct StatFlag: u32 {
-        const NAME= 1;
-        const INDEX= 2;
-        const SIZE= 4;
-        const COMP_SIZE= 8;
-        const MTIME= 16;
-        const CRC= 32;
-        const COMP_METHOD=64;
-        const ENCRYPTION_METHOD = 128;
-        const FLAGS= 256;
-    }
-}
-
-bitflags! {
-    pub struct ZipFlag: u32 {
-        const FL_NOCASE= 1;
-        const FL_NODIR= 2;
-        const FL_COMPRESSED= 4;
-        const FL_UNCHANGED= 8;
-        const FL_RECOMPRESS= 16;
-        const FL_ENCRYPTED= 32;
-        const FL_ENC_GUESS= 0;
-        const FL_ENC_RAW= 64;
-        const FL_ENC_STRICT= 128;
-        const FL_LOCAL= 256;
-        const FL_CENTRAL= 512;
-        const FL_ENC_UTF_8= 2048;
-        const FL_ENC_CP437= 4096;
-        const FL_OVERWRITE= 8192;
-    }
-}
-
-bitflags! {
-    pub struct Comp: i32 {
-        const CM_DEFAULT = -1;
-        const CM_STORE = 0;
-        const CM_DEFLATE = 8;
-        const CM_BZIP2 = 12;
-        const CM_ZSTD = 93;
-        const CM_XZ = 95;
-    }
-}
-
-bitflags! {
-    pub struct Encrypt: u16 {
-        const ZIP_EM_NONE= 0;
-        const ZIP_EM_TRAD_PKWARE= 1;
-        const ZIP_EM_AES_128= 257;
-        const ZIP_EM_AES_192= 258;
-        const ZIP_EM_AES_256= 259;
-        const ZIP_EM_UNKNOWN= 65535;
-    }
-}
-
 #[derive(Debug)]
 pub struct OpenOptions {
-    inner: OpenFlag,
+    inner: c_int,
 }
 
 impl OpenOptions {
     pub fn new() -> Self {
         Self {
-            inner: OpenFlag::empty(),
+            inner: 0,
         }
     }
 
     pub fn rdonly(&mut self, flag: bool) -> &mut Self {
         if flag {
-            self.inner.insert(OpenFlag::RDONLY);
+            self.inner |= ZIP_RDONLY;
         }
         self
     }
 
     pub fn create(&mut self, flag: bool) -> &mut Self {
         if flag {
-            self.inner.insert(OpenFlag::CREATE);
+            self.inner |= ZIP_CREATE;
         }
         self
     }
 
     pub fn excl(&mut self, flag: bool) -> &mut Self {
         if flag {
-            self.inner.insert(OpenFlag::EXCL);
+            self.inner |= ZIP_EXCL;
         }
         self
     }
 
     pub fn truncate(&mut self, flag: bool) -> &mut Self {
         if flag {
-            self.inner.insert(OpenFlag::TRUNCATE);
+            self.inner |= ZIP_TRUNCATE;
         }
         self
     }
 
     pub fn open(&self, path: &CStr) -> ZResult<Archive> {
-        _open(path, self.inner.bits())
+        _open(path, self.inner)
     }
 }
 
@@ -501,7 +437,7 @@ mod tests {
         let name = CString::new("tests/test.zip").unwrap();
         let archive = Archive::open(&name).unwrap();
 
-        let stats: Vec<_> = archive.iter_stat(StatFlag::all()).collect();
+        let stats: Vec<_> = archive.iter_stat(ZIP_STAT_CRC).collect();
 
         let files: Vec<_> = archive.iter_file(ZIP_FL_COMPRESSED).collect();
 
@@ -519,7 +455,7 @@ mod tests {
         let archive = OpenOptions::new().open(&name);
         assert!(archive.is_ok());
 
-        let stat = archive.unwrap().stat_index(u64::MAX, StatFlag::all());
+        let stat = archive.unwrap().stat_index(u64::MAX, ZIP_STAT_SIZE);
         assert!(stat.is_err());
     }
 }

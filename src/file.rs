@@ -71,6 +71,8 @@ impl Seek for File<'_> {
 mod tests {
     use std::ffi::CString;
 
+    use crate::consts::ZIP_FL_UNCHANGED;
+
     use super::*;
 
     #[test]
@@ -79,7 +81,7 @@ mod tests {
         let archive = Archive::open(&name).unwrap();
         let filename = CString::new("test/test_file1").unwrap();
         let mut file = archive
-            .open_file(&filename, ZipFlag::FL_UNCHANGED, None)
+            .open_file(&filename, ZIP_FL_UNCHANGED, None)
             .unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();

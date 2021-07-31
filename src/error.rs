@@ -6,6 +6,8 @@ use std::ops::{Deref, DerefMut};
 use std::os::raw::c_int;
 use zipp_sys::*;
 
+use crate::consts::*;
+
 pub type ZResult<T> = Result<T, Error>;
 
 #[derive(Debug)]

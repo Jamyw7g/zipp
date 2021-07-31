@@ -1,8 +1,9 @@
 pub mod archive;
 pub mod error;
 pub mod file;
-pub mod macros;
 pub mod source;
+pub mod consts;
+mod macros;
 
 pub use archive::*;
 pub use error::{Error, ZResult};
@@ -14,8 +15,6 @@ use zipp_sys::*;
 use libc::{mktime, time_t};
 use std::{ffi::CStr, mem::zeroed};
 
-#[macro_use]
-extern crate bitflags;
 
 pub fn version() -> &'static str {
     let ver = unsafe { CStr::from_ptr(zip_libzip_version()) };
@@ -23,7 +22,7 @@ pub fn version() -> &'static str {
     ver.to_str().unwrap()
 }
 
-pub fn set_mtime(sec: i32, min: i32, hour: i32, day: i32, mon: i32, year: i32) -> time_t {
+pub fn cal_mtime(sec: i32, min: i32, hour: i32, day: i32, mon: i32, year: i32) -> time_t {
     let mut tm: libc::tm = unsafe { zeroed() };
     tm.tm_sec = sec;
     tm.tm_min = min;
@@ -43,12 +42,3 @@ pub fn encryption_method_supported(method: u16, is_encrypt: bool) -> bool {
     unsafe { zip_encryption_method_supported(method, is_encrypt as _) == 1 }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn version_api() {
-        println!("{}", version());
-    }
-}

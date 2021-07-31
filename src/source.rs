@@ -260,6 +260,8 @@ impl<'a, T> Drop for WriteHalf<'a, T> {
 
 #[cfg(test)]
 mod tests {
+    use crate::consts::{ZIP_FL_ENC_UTF_8, ZIP_FL_OVERWRITE};
+
     use super::*;
     use std::ffi::CString;
 
@@ -279,7 +281,7 @@ mod tests {
             .file_add(
                 &filename,
                 source,
-                ZipFlag::FL_ENC_UTF_8 | ZipFlag::FL_OVERWRITE,
+                ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE,
             )
             .unwrap();
 
