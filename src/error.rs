@@ -140,7 +140,7 @@ where
     E: Borrow<zip_error_t> + BorrowMut<zip_error_t>,
 {
     pub fn system(&self) -> Option<SysError> {
-        let typ = unsafe { zip_error_system_type(self.error.borrow()) } as u32;
+        let typ = unsafe { zip_error_system_type(self.error.borrow()) };
         match typ {
             ZIP_ET_NONE | ZIP_ET_LIBZIP => None,
             _ => {
@@ -155,7 +155,7 @@ where
     }
 
     pub fn zip(&self) -> Option<ZipError> {
-        let code = unsafe { zip_error_code_zip(self.error.borrow()) } as u32;
+        let code = unsafe { zip_error_code_zip(self.error.borrow()) };
         Some(match code {
             ZIP_ER_OK => return None,
             ZIP_ER_MULTIDISK => ZipError::Multidisk,

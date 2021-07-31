@@ -257,3 +257,32 @@ impl<'a, T> Drop for WriteHalf<'a, T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
+
+    #[test]
+    fn read() {
+        let filename = CString::new("Cargo.toml").unwrap();
+        let source = Source::try_from(filename.as_c_str()).unwrap();
+        let mut reader = source.open_read().unwrap();
+
+        let mut buffer = Vec::new();
+        reader.read_to_end(&mut buffer).unwrap();
+        drop(reader);
+
+        let zipname = CString::new("tests/test.zip").unwrap();
+        let archive = OpenOptions::new().create(true).open(&zipname).unwrap();
+        archive
+            .file_add(
+                &filename,
+                source,
+                ZipFlag::FL_ENC_UTF_8 | ZipFlag::FL_OVERWRITE,
+            )
+            .unwrap();
+
+        println!("{:?}", buffer);
+    }
+}

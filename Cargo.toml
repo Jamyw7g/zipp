@@ -7,6 +7,16 @@ edition = "2018"
 
 [dependencies]
 bitflags = "1.2.1"
+libc = "0.2"
 zipp-sys = { path = "zipp-sys" }
 
 
+[[example]]
+name = "create"
+
+[[example]]
+name = "open"
+
+
+[[example]]
+name = "remove"
