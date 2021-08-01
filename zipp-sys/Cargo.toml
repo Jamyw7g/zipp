@@ -2,6 +2,11 @@
 name = "zipp-sys"
 version = "0.1.0"
 edition = "2018"
+repository = "https://github.com/Jamyw7g/zipp"
+description = "Safe libzip Bindings for Rust"
+license = "GPL-3.0"
+keywords = ["zip", "compress", "cli", "ffi"]
+categories = ["command-line-utilities", "api-bindings"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
