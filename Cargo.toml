@@ -1,6 +1,6 @@
 [package]
 name = "zipp"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2018"
 documentation = "https://docs.rs/crate/zipp"
 repository = "https://github.com/Jamyw7g/zipp"
@@ -19,7 +19,7 @@ exclude = [
 
 [dependencies]
 libc = "0.2"
-zipp-sys = { path = "zipp-sys", version = "0.1" }
+zipp-sys = "0.1"
 
 
 [[example]]
