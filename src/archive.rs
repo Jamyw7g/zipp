@@ -6,21 +6,24 @@ use std::ptr::{null, null_mut, NonNull};
 
 use zipp_sys::*;
 
+use crate::consts::*;
 use crate::file::File;
 use crate::source::Source;
-use crate::consts::*;
 use crate::*;
 
+/// Zip Archive
 #[derive(Debug)]
 pub struct Archive {
     inner: NonNull<zip_t>,
 }
 
 impl Archive {
+    /// Opens the zip archive specified by path
     pub fn open(path: &CStr) -> ZResult<Self> {
         _open(path, ZIP_RDONLY)
     }
 
+    /// Opens a zip archive encapsulated by the Source
     pub fn from_source<T>(source: Source<T>, flag: i32) -> ZResult<Self> {
         let mut error = ZipErrorSys::default();
         let res = unsafe { zip_open_from_source(source.into_raw(), flag, &mut *error) };
@@ -35,10 +38,12 @@ impl Archive {
         }
     }
 
+    /// Create the zip archive specified by path
     pub fn create(path: &CStr) -> ZResult<Self> {
         _open(path, ZIP_CREATE)
     }
 
+    /// Close zip archive and discard changes
     pub fn discard(self) {
         let me = ManuallyDrop::new(self);
         unsafe {
@@ -46,6 +51,7 @@ impl Archive {
         }
     }
 
+    /// Close zip archive and writes any changes made to archive to disk.
     pub fn close(self) -> ZResult<()> {
         let me = ManuallyDrop::new(self);
         let errno = unsafe { zip_close(me.inner.as_ptr()) };
@@ -56,6 +62,7 @@ impl Archive {
         }
     }
 
+    /// Undo changes to file in zip archive
     pub fn unchanged(&self, index: u64) -> ZResult<()> {
         let errno = unsafe { zip_unchange(self.inner.as_ptr(), index) };
         if errno == -1 {
@@ -65,6 +72,7 @@ impl Archive {
         }
     }
 
+    /// Undo global changes to zip archive
     pub fn unchanged_archive(&self) -> ZResult<()> {
         let errno = unsafe { zip_unchange_archive(self.inner.as_ptr()) };
         if errno == -1 {
@@ -74,6 +82,7 @@ impl Archive {
         }
     }
 
+    /// Undo all changes in a zip archive
     pub fn unchanged_all(&self) -> ZResult<()> {
         let errno = unsafe { zip_unchange_all(self.inner.as_ptr()) };
         if errno == -1 {
@@ -83,6 +92,7 @@ impl Archive {
         }
     }
 
+    /// Set default password for encrypted files in zip
     pub fn set_default_password(&self, password: &CStr) -> ZResult<()> {
         let errno = unsafe { zip_set_default_password(self.inner.as_ptr(), password.as_ptr()) };
         if errno == -1 {
@@ -92,6 +102,7 @@ impl Archive {
         }
     }
 
+    /// Set compression method for file in zip
     pub fn set_file_compression(&self, index: u64, comp: i32, comp_flag: u32) -> ZResult<()> {
         let errno =
             unsafe { zip_set_file_compression(self.inner.as_ptr(), index, comp, comp_flag) };
@@ -102,10 +113,10 @@ impl Archive {
         }
     }
 
+    /// Set encryption method for file in zip
     pub fn file_set_encryption(&self, index: u64, method: u16, passwd: &CStr) -> ZResult<()> {
-        let errno = unsafe {
-            zip_file_set_encryption(self.inner.as_ptr(), index, method, passwd.as_ptr())
-        };
+        let errno =
+            unsafe { zip_file_set_encryption(self.inner.as_ptr(), index, method, passwd.as_ptr()) };
         if errno == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -113,6 +124,7 @@ impl Archive {
         }
     }
 
+    /// Set zip archive comment
     pub fn set_comment(&self, comment: &CStr) -> ZResult<()> {
         let len = comment.to_bytes().len();
         let len = if len > u16::MAX as usize {
@@ -128,6 +140,7 @@ impl Archive {
         }
     }
 
+    /// Get zip archive comment
     pub fn get_comment(&self, flag: u32) -> ZResult<&CStr> {
         let res = unsafe { zip_get_archive_comment(self.inner.as_ptr(), null_mut(), flag) };
         if res.is_null() {
@@ -137,14 +150,15 @@ impl Archive {
         }
     }
 
+    /// Open encrypted file in zip archive for reading by name, if passwd is None, it would be
+    /// open normal
     pub fn open_file(&self, name: &CStr, flag: u32, passwd: Option<&CStr>) -> ZResult<File> {
         let passwd = if passwd.is_none() {
             null()
         } else {
             passwd.unwrap().as_ptr()
         };
-        let res =
-            unsafe { zip_fopen_encrypted(self.inner.as_ptr(), name.as_ptr(), flag, passwd) };
+        let res = unsafe { zip_fopen_encrypted(self.inner.as_ptr(), name.as_ptr(), flag, passwd) };
         if res.is_null() {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -152,19 +166,15 @@ impl Archive {
         }
     }
 
-    pub fn open_file_index(
-        &self,
-        index: u64,
-        flag: u32,
-        passwd: Option<&CStr>,
-    ) -> ZResult<File> {
+    /// Open encrypted file in zip archive for reading, if passwd is None, it will open as normal
+    /// file
+    pub fn open_file_index(&self, index: u64, flag: u32, passwd: Option<&CStr>) -> ZResult<File> {
         let passwd = if passwd.is_none() {
             null()
         } else {
             passwd.unwrap().as_ptr()
         };
-        let res =
-            unsafe { zip_fopen_index_encrypted(self.inner.as_ptr(), index, flag, passwd) };
+        let res = unsafe { zip_fopen_index_encrypted(self.inner.as_ptr(), index, flag, passwd) };
         if res.is_null() {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -172,9 +182,9 @@ impl Archive {
         }
     }
 
+    /// Rename file in zip archive
     pub fn file_rename(&self, index: u64, name: &CStr, flag: u32) -> ZResult<()> {
-        let errno =
-            unsafe { zip_file_rename(self.inner.as_ptr(), index, name.as_ptr(), flag) };
+        let errno = unsafe { zip_file_rename(self.inner.as_ptr(), index, name.as_ptr(), flag) };
         if errno == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -182,15 +192,10 @@ impl Archive {
         }
     }
 
+    /// Add file to zip archive or replace file in zip archive
     pub fn file_add<T>(&self, name: &CStr, source: Source<T>, flag: u32) -> ZResult<u64> {
-        let res = unsafe {
-            zip_file_add(
-                self.inner.as_ptr(),
-                name.as_ptr(),
-                source.into_raw(),
-                flag,
-            )
-        };
+        let res =
+            unsafe { zip_file_add(self.inner.as_ptr(), name.as_ptr(), source.into_raw(), flag) };
         if res == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -198,9 +203,9 @@ impl Archive {
         }
     }
 
+    /// Add file to zip archive or replace file in zip archive
     pub fn file_replace<T>(&self, index: u64, source: Source<T>, flag: u32) -> ZResult<()> {
-        let res =
-            unsafe { zip_file_replace(self.inner.as_ptr(), index, source.into_raw(), flag) };
+        let res = unsafe { zip_file_replace(self.inner.as_ptr(), index, source.into_raw(), flag) };
         if res == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -208,6 +213,7 @@ impl Archive {
         }
     }
 
+    /// Delete file from zip archive
     pub fn file_delete(&self, index: u64) -> ZResult<()> {
         let errno = unsafe { zip_delete(self.inner.as_ptr(), index) };
         if errno == -1 {
@@ -217,9 +223,9 @@ impl Archive {
         }
     }
 
+    /// Get comment for file in zip
     pub fn file_get_comment(&self, index: u64, flag: u32) -> ZResult<&CStr> {
-        let res =
-            unsafe { zip_file_get_comment(self.inner.as_ptr(), index, null_mut(), flag) };
+        let res = unsafe { zip_file_get_comment(self.inner.as_ptr(), index, null_mut(), flag) };
         if res.is_null() {
             zip_err!(self.inner.as_ptr())
         } else {
@@ -227,6 +233,7 @@ impl Archive {
         }
     }
 
+    /// Get information about file by name
     pub fn stat_name(&self, name: &CStr, flag: u32) -> ZResult<Stat> {
         let mut stat = unsafe { zeroed() };
         let res = unsafe {
@@ -240,19 +247,22 @@ impl Archive {
         }
     }
 
+    /// Get name of file by index
     pub fn get_name(&self, index: u64, flag: u32) -> &CStr {
         unsafe { CStr::from_ptr(zip_get_name(self.inner.as_ptr(), index, flag)) }
     }
 
+    /// Get index of file by name
     pub fn get_index(&self, name: &CStr, flag: u32) -> ZResult<u64> {
         let res = unsafe { zip_name_locate(self.inner.as_ptr(), name.as_ptr(), flag) };
         if res == -1 {
             zip_err!(self.inner.as_ptr())
         } else {
-            Ok( res as _ )
+            Ok(res as _)
         }
     }
 
+    /// Get number of files in archive
     pub fn num_entries(&self, flag: u32) -> u64 {
         // Safety: because of self.inner is `NonNull` pointer
         unsafe { zip_get_num_entries(self.inner.as_ptr(), flag) as _ }
@@ -269,6 +279,7 @@ impl Archive {
     }
     */
 
+    /// Add directory to zip archive
     pub fn dir_add(&self, name: &CStr, flag: u32) -> ZResult<u64> {
         let res = unsafe { zip_dir_add(self.inner.as_ptr(), name.as_ptr(), flag) };
         if res == -1 {
@@ -278,6 +289,7 @@ impl Archive {
         }
     }
 
+    /// Get information about file
     pub fn stat_index(&self, index: u64, flag: u32) -> ZResult<Stat> {
         let mut stat = unsafe { zeroed() };
         let res = unsafe {
@@ -291,6 +303,7 @@ impl Archive {
         }
     }
 
+    /// Gets an iterator over the file entries of archive
     pub fn iter_file(&self, flag: u32) -> IterFile {
         IterFile {
             ptr: self.inner.as_ptr(),
@@ -300,6 +313,7 @@ impl Archive {
         }
     }
 
+    /// Gets an iterator over the item stat of archive
     pub fn iter_stat(&self, flag: u32) -> IterStat {
         IterStat {
             ptr: self.inner.as_ptr(),
@@ -318,6 +332,7 @@ impl Drop for Archive {
     }
 }
 
+/// File item iterater struct
 #[derive(Debug)]
 pub struct IterFile<'a> {
     ptr: *mut zip_t,
@@ -340,6 +355,7 @@ impl<'a> Iterator for IterFile<'a> {
     }
 }
 
+/// Stat item iterater struct
 #[derive(Debug)]
 pub struct IterStat<'a> {
     ptr: *mut zip_t,
@@ -366,18 +382,19 @@ impl<'a> Iterator for IterStat<'a> {
     }
 }
 
+/// Open archive with flags
 #[derive(Debug)]
 pub struct OpenOptions {
     inner: c_int,
 }
 
 impl OpenOptions {
+    /// Open archive that edit at default
     pub fn new() -> Self {
-        Self {
-            inner: 0,
-        }
+        Self { inner: 0 }
     }
 
+    /// Open archive read only
     pub fn rdonly(&mut self, flag: bool) -> &mut Self {
         if flag {
             self.inner |= ZIP_RDONLY;
@@ -385,6 +402,7 @@ impl OpenOptions {
         self
     }
 
+    /// If archive no exits, it will create a new archive
     pub fn create(&mut self, flag: bool) -> &mut Self {
         if flag {
             self.inner |= ZIP_CREATE;
@@ -392,6 +410,7 @@ impl OpenOptions {
         self
     }
 
+    /// If archive exits, it will return Error
     pub fn excl(&mut self, flag: bool) -> &mut Self {
         if flag {
             self.inner |= ZIP_EXCL;
@@ -399,6 +418,7 @@ impl OpenOptions {
         self
     }
 
+    /// Clear an exits archive
     pub fn truncate(&mut self, flag: bool) -> &mut Self {
         if flag {
             self.inner |= ZIP_TRUNCATE;
@@ -406,6 +426,7 @@ impl OpenOptions {
         self
     }
 
+    /// Consume the flag to open archive
     pub fn open(&self, path: &CStr) -> ZResult<Archive> {
         _open(path, self.inner)
     }

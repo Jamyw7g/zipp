@@ -6,6 +6,7 @@ use zipp_sys::*;
 
 use crate::*;
 
+/// File contain the file item in archive.
 #[derive(Debug)]
 pub struct File<'a> {
     inner: *mut zip_file_t,
@@ -13,12 +14,15 @@ pub struct File<'a> {
 }
 
 impl File<'_> {
+    /// Using raw pointer construct File
     pub fn from_ptr(inner: *mut zip_file_t) -> Self {
         Self {
             inner,
             _phantom_data: PhantomData,
         }
     }
+
+    /// Get File error
     fn error(&self) -> ZipErrorSys<&mut zip_error_t> {
         unsafe {
             let error = zip_file_get_error(self.inner);
@@ -27,6 +31,7 @@ impl File<'_> {
     }
 }
 
+/// Close File when it drop
 impl Drop for File<'_> {
     fn drop(&mut self) {
         unsafe {
@@ -37,6 +42,7 @@ impl Drop for File<'_> {
     }
 }
 
+/// Implement Read trait that can use std-io to read
 impl Read for File<'_> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let res = unsafe { zip_fread(self.inner, buf.as_mut_ptr().cast(), buf.len() as _) };
@@ -49,6 +55,7 @@ impl Read for File<'_> {
     }
 }
 
+/// Implement Seek trait that can use std-io to seek
 impl Seek for File<'_> {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
         let res = unsafe {

@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, ffi::CString};
 
-use zipp::{source::Source, Archive};
 use zipp::consts::*;
+use zipp::{source::Source, Archive};
 
 fn main() {
     let zipname = CString::new("test.zip").unwrap();

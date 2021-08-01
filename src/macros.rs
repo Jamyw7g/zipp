@@ -1,3 +1,5 @@
+/// Get file error.
+/// The argument is the pointer of zip_file_t.
 #[macro_export]
 macro_rules! file_err {
     ($fp_ptr:expr) => {
@@ -8,6 +10,8 @@ macro_rules! file_err {
     };
 }
 
+/// Get zip error.
+/// The argument is the pointer of zip_archive_t.
 #[macro_export]
 macro_rules! zip_err {
     ($zip_ptr:expr) => {

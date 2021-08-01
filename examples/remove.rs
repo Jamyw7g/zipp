@@ -1,6 +1,6 @@
 use std::ffi::CString;
 
-use zipp::{OpenOptions, consts::ZIP_FL_NOCASE};
+use zipp::{consts::ZIP_FL_NOCASE, OpenOptions};
 
 fn main() {
     let zipname = CString::new("test.zip").unwrap();

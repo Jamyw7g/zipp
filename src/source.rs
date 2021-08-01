@@ -10,6 +10,7 @@ use zipp_sys::*;
 
 use crate::*;
 
+/// Reference type, increase reference count when clone, descrease when drop
 #[derive(Debug)]
 pub struct Source<T> {
     inner: *mut zip_source_t,
@@ -24,6 +25,7 @@ impl<T> Source<T> {
         }
     }
 
+    /// concume Self into raw pointer
     pub fn into_raw(self) -> *mut zip_source_t {
         let me = ManuallyDrop::new(self);
         me.inner
@@ -33,6 +35,7 @@ impl<T> Source<T> {
         self.inner
     }
 
+    /// open zip_source for reading
     pub fn open_read(&self) -> ZResult<ReadHalf<T>> {
         unsafe {
             let errno = zip_source_open(self.inner);
@@ -48,6 +51,10 @@ impl<T> Source<T> {
         }
     }
 
+    /// prepare zip source for writing
+    ///
+    /// offset: preserves the first offset bytes of the original file.
+    /// This is done efficiently, and writes to source won't overwrite the original data until drop.
     pub fn open_write(&self, offset: Option<u64>) -> ZResult<WriteHalf<T>> {
         let offset = offset.unwrap_or(0);
         unsafe {
@@ -85,6 +92,8 @@ impl<T> Drop for Source<T> {
     }
 }
 
+/// Type marker, mark Source was open from a file.
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct File;
 
@@ -124,6 +133,7 @@ impl<'a> TryFrom<&'a [u8]> for Source<&'a [u8]> {
     }
 }
 
+/// A reference of Source which can be read
 #[derive(Debug)]
 pub struct ReadHalf<'a, T: 'a> {
     inner: *mut zip_source_t,
@@ -189,6 +199,7 @@ impl<'a, T> Drop for ReadHalf<'a, T> {
     }
 }
 
+/// A reference of Source which can be write
 #[derive(Debug)]
 pub struct WriteHalf<'a, T: 'a> {
     inner: *mut zip_source_t,
@@ -278,11 +289,7 @@ mod tests {
         let zipname = CString::new("tests/test.zip").unwrap();
         let archive = OpenOptions::new().create(true).open(&zipname).unwrap();
         archive
-            .file_add(
-                &filename,
-                source,
-                ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE,
-            )
+            .file_add(&filename, source, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE)
             .unwrap();
 
         println!("{:?}", buffer);
